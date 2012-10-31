@@ -2,4 +2,7 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 GET     /                           controllers.Application.index
-GET     /assets/*file               controllers.Assets.at(path="/public", file)
+GET 	/openIDCallback				controllers.Application.openIDCallback
+GET     /authenticate               controllers.Application.authenticate
+
+GET     /*file               controllers.Assets.at(path="/public", file)

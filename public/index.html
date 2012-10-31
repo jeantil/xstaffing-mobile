@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.css"/>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap-responsive.css"/>
+    <link rel="stylesheet" type="text/css" href="css/app.css"/>
+    <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
+    <script type="text/javascript" src="js/handlebars-1.0.0.beta.4.js"></script>
+    <script type="text/javascript" src="js/zepto.js"></script>
+    <script type="text/javascript" charset="utf-8" src="js/main.js"></script>
+</head>
+<body>
+<div class="page-header"><h1>XSTAFFING</h1></div>
+<div id="status" class="container">Loading...</div>
+
+<script id="clients_template" type="text/x-handlebars-template">
+    <ul class="thumbnails">
+        {{#each client}}
+        <li class="span12">
+            <a class="btn span12 client" data-id="{{name}}" href="#" value="{{name}}">{{name}} ({{distance}}m)</a>
+        </li>
+        {{/each}}
+        <li>
+            <a class="btn span12" id="where"  href="#" value="where">Ajouter</a>
+        </li>
+    </ul>
+</script>
+
+<script id="where_template" type="text/x-handlebars-template">
+<form class="form-horizontal">
+    <fieldset>
+    <label>Client</label><input name="name" value=""/>
+    <label>Latitude</label><input name="latitude" value="{{position.lat}}"/>
+    <label>Longitude</label><input name="longitude" value="{{position.lng}}"/>
+    <button class="btn" name="submit" value="Ok">Submit</button>
+    </fieldset>
+</form>
+</script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        var clients_template = Handlebars.compile($('#clients_template').html());
+        var where_template = Handlebars.compile($('#where_template').html());
+
+        function success(position) {
+            var s = $('#status');
+            var latlng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+            var localClients = Clients.closeBy(latlng);
+            s.html(clients_template({client:localClients}))
+            $(".client").click(function(event){
+                var target=$(event.currentTarget);
+                var clientName=target.attr('data-id');
+                alert(clientName);
+                console.log(clientName);
+            })
+
+            $("#where").click(function(event){
+                $('#status').html(where_template({position:{lat:latlng.lat(),lng:latlng.lng()}}));
+            })
+            console.log(latlng);
+        }
+
+        function error(positionError) {
+            alert("Failed");
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("user did not share geolocation data");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("could not detect current position");
+                    break;
+                case error.TIMEOUT:
+                    alert("retrieving position timed out");
+                    break;
+                default:
+                    alert("unknown error");
+                    break;
+            }
+        }
+
+
+        Handlebars.registerHelper('abstract', function () {
+            return new Handlebars.SafeString(this.abstract);
+        });
+
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(success, error);
+        } else {
+            error('not supported');
+        }
+    })
+</script>
+</body>
+</html>

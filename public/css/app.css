@@ -1,0 +1,15 @@
+body{
+    background-color: black;
+    color: #f5f5f5;
+}
+.page-header{
+    margin-top: 0;
+    background-color: #653A71;
+}
+h1 {
+    margin: 0;
+    padding: 10px;
+}
+.container{
+    background-color: black;
+}
