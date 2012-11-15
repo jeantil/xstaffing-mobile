@@ -23,7 +23,5 @@ object ApplicationBuild extends Build {
 	  case dep if dep.name=="play"  => exclusions.foldLeft(dep){ (depWithExclusions, ex) => depWithExclusions.excludeAll(ex)}
 	  case dep => dep
 	}}
-  ) 
- 
-
+  )
 }

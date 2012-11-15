@@ -9,6 +9,7 @@
     <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
     <script type="text/javascript" src="js/handlebars-1.0.0.beta.4.js"></script>
     <script type="text/javascript" src="js/zepto.js"></script>
+    <script type="text/javascript" charset="utf-8" src="js/claim.js"></script>
     <script type="text/javascript" charset="utf-8" src="js/main.js"></script>
 </head>
 <body>
@@ -29,36 +30,43 @@
 </script>
 
 <script id="where_template" type="text/x-handlebars-template">
-<form class="form-horizontal">
+<form action="/locations" method="post" id="create-location" class="form-horizontal" >
     <fieldset>
-    <label>Client</label><input name="name" value=""/>
+    <label>Client</label><input name="clientName" value=""/>
     <label>Latitude</label><input name="latitude" value="{{position.lat}}"/>
     <label>Longitude</label><input name="longitude" value="{{position.lng}}"/>
-    <button class="btn" name="submit" value="Ok">Submit</button>
+    <button class="btn" name="submit" id="create" value="Ok">Submit</button>
     </fieldset>
 </form>
 </script>
 <script type="text/javascript">
     $(document).ready(function () {
+
         var clients_template = Handlebars.compile($('#clients_template').html());
         var where_template = Handlebars.compile($('#where_template').html());
 
         function success(position) {
-            var s = $('#status');
-            var latlng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-            var localClients = Clients.closeBy(latlng);
-            s.html(clients_template({client:localClients}))
-            $(".client").click(function(event){
-                var target=$(event.currentTarget);
-                var clientName=target.attr('data-id');
-                alert(clientName);
-                console.log(clientName);
-            })
+            $.getJSON('/locations', function(data){
+                Clients.clients=data;
 
-            $("#where").click(function(event){
-                $('#status').html(where_template({position:{lat:latlng.lat(),lng:latlng.lng()}}));
-            })
-            console.log(latlng);
+                var s = $('#status');
+                var latlng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+                var localClients = Clients.closeBy(latlng);
+
+                s.html(clients_template({client:localClients}));
+                $(".client").click(function(event){
+                    var target=$(event.currentTarget);
+                    var clientName=target.attr('data-id');
+                    alert(clientName);
+                    console.log(clientName);
+                });
+
+                $("#where").click(function(event){
+                    var el= $('#status');
+                    el.html(where_template({position:{lat:latlng.lat(),lng:latlng.lng()}}));
+                });
+                console.log(latlng);
+            });
         }
 
         function error(positionError) {

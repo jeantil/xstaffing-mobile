@@ -5,4 +5,7 @@ GET     /                           controllers.Application.index
 GET 	/openIDCallback				controllers.Application.openIDCallback
 GET     /authenticate               controllers.Application.authenticate
 
+GET    /locations                  controllers.Locations.index
+POST    /locations                  controllers.Locations.create
+
 GET     /*file               controllers.Assets.at(path="/public", file)

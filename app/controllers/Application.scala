@@ -2,7 +2,7 @@ package controllers
 
 import play.api._
 import play.api.Play.current
-import libs.concurrent.{Thrown, Redeemed}
+import libs.concurrent.{Promise, Thrown, Redeemed}
 import libs.openid.OpenID
 import play.api.mvc._
 import play.mvc.Http
@@ -54,24 +54,18 @@ trait XStaffing {
   this: Controller with Secured=>
   def index = IsAuthenticated { userid => controllers.Assets.at("/public","index.html") }
 
-  def authenticate = Action { implicit request =>
-    Logger.debug("in authenticate")
-    AsyncResult(
-      OpenID.redirectURL(
-        "https://www.google.com/accounts/o8/id",
-        routes.Application.openIDCallback().absoluteURL(),
-        REQUIRED_ATTRIBUTES
-      ).extend(_.value match {
-        case Redeemed(url) =>
-          Logger.debug("authenticate redirecting to "+url)
-          Redirect(url)
 
-        case Thrown(throwable) =>
-          Logger.error("authenticate impossible d'authentifier avec openid",throwable)
-          Unauthorized("")
+  def authenticate = Action { implicit request =>
+      val openIdCallbackUrl: String = routes.Application.openIDCallback().absoluteURL()
+      def responseHandler(promise: Promise[String]): Result = {
+        promise.value match {
+          case Redeemed(url) => Redirect(url)
+          case Thrown(throwable) => Unauthorized("")
+        }
       }
+      AsyncResult(
+        OpenID.redirectURL("https://www.google.com/accounts/o8/id", openIdCallbackUrl, REQUIRED_ATTRIBUTES).extend(responseHandler)
       )
-    )
   }
   def openIDCallback = Action { implicit request =>
     AsyncResult(
