@@ -59,7 +59,17 @@ trait Locations {
 
   def index = IsAuthenticated {
     userId => implicit request => {
-      val userLocations = cache.getOrElse(userId, Map()).values
+      def userLocationsFromDB(userId:String):Map[String,Location]={
+        Location.findByUserId(userId).map {l:Location=>(l.clientName,l)}.toMap
+      }
+      val userLocations:Iterable[Location] = cache.get(userId) match {
+        case Some(loaded) => loaded.values
+        case None => {
+          val loaded: Map[String, Location] = userLocationsFromDB(userId)
+          cache.update(userId, loaded)
+          loaded.values
+        }
+      }
       Ok(toJson(userLocations.toSeq))
     }
   }
@@ -72,12 +82,11 @@ trait Locations {
           val clientName = value.clientName
           val current: Map[String, Location] = cache.getOrElse(userId, Map())
           cache.update(userId, current.updated(clientName, value))
+          Location.insert(value, userId)
           Redirect(routes.Application.index())
         }
       )
   }
-
-
 }
 
 object Locations extends Controller with Secured with Locations

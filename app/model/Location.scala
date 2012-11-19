@@ -1,5 +1,6 @@
 package model
 
+
 import play.api.libs.json.{JsSuccess, JsValue, Format}
 import play.api.libs.json.Json
 
@@ -46,5 +47,33 @@ object Location {
       )
     }
   }
+
+  def insert(location:Location, userId:String):Location=DAO.insert(location,userId)
+  def findByUserId(userId:String):Seq[Location]=DAO.findByUserId(userId)
+
+  object DAO {
+    import play.api.Application
+    import play.api.Play.current
+    import play.api.db.DB
+    import scala.slick.session.Database
+    import Database.threadLocalSession
+    import scala.slick.jdbc.{GetResult, StaticQuery => Q}
+
+    def insert(location:Location, userId:String):Location={
+      Database.forDataSource(DB.getDataSource()) withSession {
+        (Q.u + "insert into locations values (" +? userId +
+          "," +? location.clientName + "," +? location.position.latitude + "," +? location.position.longitude  + ")").execute
+      }
+      location
+    }
+    def findByUserId(userId:String):Seq[Location]={
+      implicit val getLocationResult = GetResult(r => Location( r.<<, Position(r.<<, r.<<)))
+      Database.forDataSource(DB.getDataSource()) withSession {
+        Q.query[String,Location]("select * from locations where userId=?").list(userId)
+      }
+    }
+  }
+
+
 }
 
