@@ -59,25 +59,27 @@ trait XStaffing {
   this: Controller with Secured=>
   def index = IsAuthenticated { userid => implicit request => controllers.Assets.at("/public","index.html")(request) }
 
-
   def authenticate = Action { implicit request =>
       val openIdCallbackUrl: String = routes.Application.openIDCallback().absoluteURL()
-      def responseHandler(promise: NotWaiting[String]): Result = {
+      def onRedirected(promise: NotWaiting[String]): Result = {
         promise match {
           case Redeemed(url) => Redirect(url)
           case Thrown(throwable) => Unauthorized("Unable to verify your openid provider.<br>"+throwable.getMessage)
         }
       }
       AsyncResult(
-        OpenID.redirectURL("https://www.google.com/accounts/o8/id", openIdCallbackUrl, REQUIRED_ATTRIBUTES).extend1(responseHandler)
+        OpenID.redirectURL("https://www.google.com/accounts/o8/id", openIdCallbackUrl, REQUIRED_ATTRIBUTES).extend1(onRedirected)
       )
   }
   def openIDCallback = Action { implicit request =>
-    AsyncResult(
-      OpenID.verifiedId.extend1( _ match {
+    def onVerified(promise:NotWaiting[UserInfo]):Result ={
+      promise match {
         case Redeemed(info) => Redirect(routes.Application.index()).withSession(("email",info.attributes.get("email").get))
         case Thrown(throwable) => Unauthorized("Authorization refused by your openid provider<br>"+throwable.getMessage)
-      })
+      }
+    }
+    AsyncResult(
+      OpenID.verifiedId.extend1(onVerified)
     )
   }
   def logout = Action { implicit request =>
