@@ -3,6 +3,10 @@ package model
 
 import play.api.libs.json.{JsSuccess, JsValue, Format}
 import play.api.libs.json.Json
+import play.Logger
+import scala.StringContext
+import org.h2.jdbc.JdbcSQLException
+import slick.jdbc.GetResult
 
 case class Position(latitude:BigDecimal, longitude:BigDecimal)
 case class Location(clientName:String,position:Position)
@@ -58,22 +62,30 @@ object Location {
     import scala.slick.session.Database
     import Database.threadLocalSession
     import scala.slick.jdbc.{GetResult, StaticQuery => Q}
+    import Q.interpolation
 
     def insert(location:Location, userId:String):Location={
       Database.forDataSource(DB.getDataSource()) withSession {
-        (Q.u + "insert into locations values (" +? userId +
-          "," +? location.clientName + "," +? location.position.latitude + "," +? location.position.longitude  + ")").execute
+        try{
+          val statement=sqlu"""
+            insert into locations
+            values ($userId,${location.clientName},${location.position.latitude},${location.position.longitude})
+            """
+            statement.execute()
+        }catch{
+          case e:JdbcSQLException=>Logger.info(s"Unable to persist location($userId,${location.clientName},${location.position.latitude},${location.position.longitude}), location already exists")
+          case e=>Logger.warn(s"Unable to persist location($userId,${location.clientName},${location.position.latitude},${location.position.longitude})",e)
+        }
       }
       location
     }
     def findByUserId(userId:String):Seq[Location]={
       implicit val getLocationResult = GetResult(r => Location( r.<<, Position(r.<<, r.<<)))
       Database.forDataSource(DB.getDataSource()) withSession {
-        Q.query[String,Location]("select * from locations where userId=?").list(userId)
+        val statement=sql"select clientName, latitude, longitude from locations where userId=$userId".as[Location]
+        statement.list()
       }
     }
   }
-
-
 }
 
