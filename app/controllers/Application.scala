@@ -1,11 +1,15 @@
 package controllers
 
+
+
 import play.api._
-import play.api.Play.current
-import libs.concurrent.{Promise, Thrown, Redeemed}
-import libs.openid.OpenID
+import play.api.libs.concurrent._
+import play.api.libs.concurrent.Execution.Implicits._
+import libs.openid.{UserInfo, OpenID}
 import play.api.mvc._
-import play.mvc.Http
+import play.api.mvc.Results._
+import concurrent.Future
+import scala.util.{Try,Success,Failure}
 
 /**
  * Provide security features
@@ -24,7 +28,8 @@ trait Secured {
    */
   private def onUnauthorized(request: RequestHeader) = {
     Logger.info("Unauthorized access to "+request.uri+" , redirecting to "+routes.Application.authenticate())
-    Results.Redirect(routes.Application.authenticate())
+
+    Redirect(routes.Application.authenticate())
   }
 
   // ---
@@ -52,28 +57,31 @@ trait Secured {
 
 trait XStaffing {
   this: Controller with Secured=>
-  def index = IsAuthenticated { userid => controllers.Assets.at("/public","index.html") }
+  def index = IsAuthenticated { userid => implicit request => controllers.Assets.at("/public","index.html")(request) }
 
 
   def authenticate = Action { implicit request =>
       val openIdCallbackUrl: String = routes.Application.openIDCallback().absoluteURL()
-      def responseHandler(promise: Promise[String]): Result = {
-        promise.value match {
+      def responseHandler(promise: NotWaiting[String]): Result = {
+        promise match {
           case Redeemed(url) => Redirect(url)
-          case Thrown(throwable) => Unauthorized("")
+          case Thrown(throwable) => Unauthorized("Unable to verify your openid provider.<br>"+throwable.getMessage)
         }
       }
       AsyncResult(
-        OpenID.redirectURL("https://www.google.com/accounts/o8/id", openIdCallbackUrl, REQUIRED_ATTRIBUTES).extend(responseHandler)
+        OpenID.redirectURL("https://www.google.com/accounts/o8/id", openIdCallbackUrl, REQUIRED_ATTRIBUTES).extend1(responseHandler)
       )
   }
   def openIDCallback = Action { implicit request =>
     AsyncResult(
-      OpenID.verifiedId.extend( _.value match {
+      OpenID.verifiedId.extend1( _ match {
         case Redeemed(info) => Redirect(routes.Application.index()).withSession(("email",info.attributes.get("email").get))
-        case Thrown(throwable) => Unauthorized("")
+        case Thrown(throwable) => Unauthorized("Authorization refused by your openid provider<br>"+throwable.getMessage)
       })
     )
+  }
+  def logout = Action { implicit request =>
+    Redirect(routes.Application.index()).withNewSession
   }
 }
 

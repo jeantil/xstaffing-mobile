@@ -9,7 +9,7 @@ import validation.Constraint
 import model.Location
 import play.api.libs.json.Json.toJson
 import play.libs.Akka
-import akka.util.duration._
+
 
 trait Locations {
   this: Controller with Secured =>
