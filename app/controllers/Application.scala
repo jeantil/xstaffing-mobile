@@ -15,9 +15,7 @@ import scala.util.{Try,Success,Failure}
  * Provide security features
  */
 trait Secured {
-  val REQUIRED_ATTRIBUTES=Seq(
-    "email" -> "http://schema.openid.net/contact/email"
-  )
+
   /**
    * Retrieve the connected user email.
    */
@@ -58,6 +56,10 @@ trait Secured {
 trait XStaffing {
   this: Controller with Secured=>
   def index = IsAuthenticated { userid => implicit request => controllers.Assets.at("/public","index.html")(request) }
+
+  val REQUIRED_ATTRIBUTES=Seq(
+    "email" -> "http://schema.openid.net/contact/email"
+  )
 
   def authenticate = Action { implicit request =>
       val openIdCallbackUrl: String = routes.Application.openIDCallback().absoluteURL()
